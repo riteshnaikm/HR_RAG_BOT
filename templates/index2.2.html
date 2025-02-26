@@ -1,0 +1,456 @@
+<!-- same as 2.1 with streaming! -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PeopleBot - HR Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- XSS Protection for Markdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js"></script>
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <style>
+        /* General Styles */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Light Mode */
+        body:not(.dark-mode) {
+            background-color: #f9fafb; /* Light gray background */
+            color: #1f2937; /* Dark text */
+        }
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: #1f2937; /* Dark gray background */
+            color: #f3f4f6; /* Light text */
+        }
+        /* Container Styles */
+        #container {
+            
+            background-color: white;
+            color: #1f2937;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 800px; /* Increased width */
+            max-width: 100%; /
+
+        }
+        body.dark-mode #container {
+            background-color: #374151; /* Dark container background */
+            color: #e5e7eb; /* Light text */
+        }
+        /* Input Field */
+        textarea {
+            background-color: white;
+            color: #1f2937;
+            border-color: #d1d5db;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            resize: vertical;
+            font-size: 14px;
+        }
+        body.dark-mode textarea {
+            background-color: #374151;
+            color: #e5e7eb;
+            border-color: #6b7280;
+        }
+        /* Buttons */
+        button {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-mode button {
+            background-color: #2563eb;
+            color: white;
+        }
+        /* AI Toggle Button Styles */
+        .toggle-btn {
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .toggle-btn.off {
+            background-color: #e5e7eb; /* Light gray background */
+            color: #374151; /* Dark text */
+        }
+        .toggle-btn.on {
+            background-color: #10b981; /* Green background */
+            color: white; /* White text */
+        }
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        /* Dark Mode Toggle Button */
+        #theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #theme-toggle:hover {
+            opacity: 0.8;
+        }
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        table th,
+        table td {
+            border: 1px solid #ddd; /* Add borders */
+            padding: 8px;
+        }
+        table th {
+            background-color: #f4f4f4; /* Header background */
+            font-weight: bold;
+        }
+        table tr:nth-child(even) {
+            background-color: #f9f9f9; /* Alternate row colors */
+        }
+        table tr:hover {
+            background-color: #f1f1f1; /* Highlight rows on hover */
+        }
+        /* Feedback Buttons */
+        .feedback-btn {
+            padding: 8px 12px;
+            font-size: 1.2rem; /* Larger icon size */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .feedback-btn.thumbs-up {
+            background-color: #d1fae5;
+            color: #10b981;
+        }
+        .feedback-btn.thumbs-down {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        .feedback-btn:hover {
+            opacity: 0.8;
+        }
+        body.dark-mode .feedback-btn.thumbs-up {
+            background-color: #10b981;
+            color: white;
+        }
+        body.dark-mode .feedback-btn.thumbs-down {
+            background-color: #ef4444;
+            color: white;
+        }
+        /* Feedback Confirmation Message */
+        #feedback-message {
+            display: none;
+            font-size: 0.9rem;
+            color: green;
+            margin-left: 1rem;
+        }
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        body.dark-mode .toggle-container {
+            color: #e5e7eb;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3; /* Blue when toggled on */
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        textarea::placeholder {
+    font-size: 14px; /* Decreased font size for placeholder */
+    color: #6b7280; /* Placeholder text color */
+                                }
+    body.dark-mode textarea::placeholder {
+        color: #9ca3af; /* Dark mode placeholder text color */
+                        }
+
+
+
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen transition-colors duration-300" id="body">
+    <div class="bg-white w-full max-w-2xl p-6 rounded-lg shadow-lg transition-colors duration-300 relative" id="container">
+        <!-- Dark Mode Toggle (Top Right Corner) -->
+        <button id="theme-toggle" onclick="toggleTheme()" class="flex items-center gap-1 text-gray-700 hover:text-gray-900">
+            <span id="theme-icon">🌙</span>
+        </button>
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-600">PeopleBot 🤖</h1>
+            <p class="text-gray-500 italic">Your AI-powered HR assistant</p>
+        </div>
+        <!-- Input Section -->
+        <label for="question" class="block text-lg font-medium text-gray-700">Ask a Question:</label>
+        <textarea id="question" rows="4"
+            class="w-full p-3 mt-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+
+            placeholder="Ask about HR policies, benefits, or events. Enable 'Go Online' for general queries"></textarea>
+
+        <!-- Buttons Section -->
+        <div class="flex justify-between items-center mt-4 space-x-4">
+            <!-- AI Toggle Button -->
+            <div class="toggle-container">
+                <span>Go Online</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            
+            <!-- Search Button -->
+            <button onclick="askQuestion()" id="ask-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                Search
+            </button>
+        </div>
+        <!-- Warning Message -->
+        <div id="ai-warning" class="text-red-500 text-sm hidden mt-2">⚠️ Online Mode Enabled!</div>
+        <!-- Response Section -->
+        <div id="result" class="mt-6 p-4 border rounded-lg bg-gray-50 text-gray-800 text-base hidden">
+            <div id="answer-content"></div> <!-- Answer content goes here -->
+            <!-- Feedback Buttons -->
+            <div id="feedback-section" class="flex justify-end gap-4 mt-4 hidden">
+                <button id="thumbs-up" onclick="submitFeedback(true)" class="feedback-btn thumbs-up">
+                    👍
+                </button>
+                <button id="thumbs-down" onclick="submitFeedback(false)" class="feedback-btn thumbs-down">
+                    👎
+                </button>
+                <span id="feedback-message"></span> <!-- Feedback confirmation message -->
+            </div>
+        </div>
+        <!-- Footer -->
+        <footer class="text-center mt-6 text-gray-500 text-sm">
+            <span>© 2025 PeopleLogic | Powered by AI 🚀</span>
+        </footer>
+    </div>
+    <script>
+        let mode = "RAG"; // Default mode is RAG
+
+// Handle pressing ENTER to submit the query
+document.getElementById("question").addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && !event.shiftKey) { // Only trigger if Enter is pressed without Shift
+        event.preventDefault(); // Prevent new line
+        document.getElementById("ask-btn").click(); // Trigger the search button
+    }
+});
+
+function toggleAI() {
+    const toggleSwitch = document.getElementById("mode-toggle");
+    const warning = document.getElementById("ai-warning");
+    const askBtn = document.getElementById("ask-btn");
+
+    if (toggleSwitch.checked) {
+        mode = "AI";
+        warning.classList.remove("hidden");
+        askBtn.textContent = "Search";
+    } else {
+        mode = "RAG";
+        warning.classList.add("hidden");
+        askBtn.textContent = "Search";
+    }
+}
+
+// Update mode based on toggle switch
+document.getElementById("mode-toggle").addEventListener("change", toggleAI);
+
+async function askQuestion() {
+    const question = document.getElementById("question").value.trim();
+    if (question.length < 2) {
+        alert("Please provide a more detailed question.");
+        return;
+    }
+
+    const resultDiv = document.getElementById("result");
+    const answerContent = document.getElementById("answer-content");
+    const feedbackSection = document.getElementById("feedback-section");
+    const feedbackMessage = document.getElementById("feedback-message");
+
+    // Show loading spinner while processing
+    resultDiv.classList.remove("hidden");
+    answerContent.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="loading-spinner"></span>
+            <span>Thinking...</span>
+        </div>
+    `;
+    feedbackSection.classList.add("hidden"); // Hide feedback buttons during loading
+    feedbackMessage.style.display = "none"; // Reset feedback message
+
+    try {
+        const response = await fetch('/api/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question: question,
+                mode: mode // Send the mode ("RAG" or "AI") to the backend
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let answer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Decode the chunk and append it to the answer
+            const chunk = decoder.decode(value, { stream: true });
+            answer += chunk;
+
+            // Update the answer content dynamically
+            answerContent.innerHTML = DOMPurify.sanitize(marked.parse(answer));
+        }
+
+        // Show feedback buttons after streaming is complete
+        feedbackSection.classList.remove("hidden");
+    } catch (error) {
+        answerContent.innerHTML = `<span class="text-red-500">An error occurred: ${error.message}</span>`;
+    }
+}
+
+function submitFeedback(isPositive) {
+    const question = document.getElementById("question").value.trim();
+    const answerContent = document.getElementById("answer-content").innerText;
+    const feedbackSection = document.getElementById("feedback-section");
+    const feedbackMessage = document.getElementById("feedback-message");
+
+    // Disable feedback buttons to prevent multiple submissions
+    document.getElementById("thumbs-up").disabled = true;
+    document.getElementById("thumbs-down").disabled = true;
+
+    // Display feedback confirmation message
+    feedbackMessage.textContent = "Thank you for your feedback!";
+    feedbackMessage.style.display = "inline";
+
+    fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            question: question,
+            answer: answerContent,
+            feedback: isPositive ? "positive" : "negative"
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Feedback submitted successfully:", data);
+        })
+        .catch(error => {
+            console.error("Error submitting feedback:", error);
+            alert("There was an issue submitting your feedback. Please try again later.");
+            // Re-enable buttons in case of an error
+            document.getElementById("thumbs-up").disabled = false;
+            document.getElementById("thumbs-down").disabled = false;
+            feedbackMessage.style.display = "none";
+        });
+}
+
+function toggleTheme() {
+    const body = document.getElementById('body');
+    const themeIcon = document.getElementById('theme-icon');
+
+    if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        themeIcon.textContent = '🌙'; // Moon icon for dark mode
+    } else {
+        body.classList.add('dark-mode');
+        themeIcon.textContent = '☀️'; // Sun icon for light mode
+    }
+}
+
+// Initialize the toggle state
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleSwitch = document.getElementById("mode-toggle");
+    const warning = document.getElementById("ai-warning");
+    const askBtn = document.getElementById("ask-btn");
+
+    if (mode === "AI") {
+        toggleSwitch.checked = true;
+        warning.classList.remove("hidden");
+        askBtn.textContent = "Search";
+    } else {
+        toggleSwitch.checked = false;
+        warning.classList.add("hidden");
+        askBtn.textContent = "Search";
+    }
+});
+    </script>
+</body>
+</html>
